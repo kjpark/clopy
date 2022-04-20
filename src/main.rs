@@ -28,7 +28,13 @@ async fn main() -> Result<(), reqwest::Error> {
 
     println!("Received {:?} bytes", response.content_length().unwrap());
     println!("{:?}", response.headers());
-    println!("{:?}", response.text().await?);
+    
+    let bytes: Vec<u8> = response.bytes().await?.to_vec();
+    let tar = flate2::read::GzDecoder::new(&bytes[..]);
+    let mut archive = tar::Archive::new(tar);
+    archive.unpack("./output/").unwrap_or_else(|e| {
+        panic!("Error unpacking tarball: {}", e);
+    });
 
     Ok(())
 }
