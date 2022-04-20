@@ -6,8 +6,8 @@ async fn main() -> Result<(), reqwest::Error> {
     let client = reqwest::Client::new();
     let response = client
         .get("https://api.github.com/repos/kjpark/clopy/tarball/main")
-        .header("User-Agent", "reqwest")
-        .header("accept", "application/vnd.github.v3+json")
+        .header(reqwest::header::USER_AGENT, "reqwest")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
         .send()
         .await?;
 
@@ -25,6 +25,10 @@ async fn main() -> Result<(), reqwest::Error> {
             panic!("Uncaught error, please file bug report <3");
         },
     };
+
+    println!("Received {:?} bytes", response.content_length().unwrap());
+    println!("{:?}", response.headers());
+    println!("{:?}", response.text().await?);
 
     Ok(())
 }
