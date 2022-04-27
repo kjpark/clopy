@@ -8,7 +8,6 @@
 
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
-
     let cli = Args::parse();
     println!("{:?}", cli);
 
@@ -26,16 +25,16 @@ async fn main() -> Result<(), reqwest::Error> {
     match response.status() {
         reqwest::StatusCode::OK => {
             println!("200 Success. {:?}", response.status());
-        },
+        }
         reqwest::StatusCode::NOT_FOUND => {
             println!("404 Not Found. {:?}", response.status());
-        },
+        }
         reqwest::StatusCode::UNAUTHORIZED => {
             println!("401 Unauthorized {:?}", response.status());
-        },
+        }
         _ => {
             panic!("Uncaught error, please file bug report <3");
-        },
+        }
     };
 
     if cli.verbose {
@@ -43,7 +42,7 @@ async fn main() -> Result<(), reqwest::Error> {
         // println!("Received {:?} bytes", response.content_length().unwrap());
         println!("{:?}", response.headers());
     }
-    
+
     let destination = match cli.destination {
         Some(destination) => destination,
         None => String::from("."),
@@ -78,7 +77,7 @@ struct Args {
 enum Host {
     Github,
     Gitlab, // self hosted?
-    // Bitbucket,
+            // Bitbucket,
 }
 
 struct Source {
@@ -98,7 +97,7 @@ fn parse_source(source: &str) -> Source {
 
     println!("{:?}", parts);
 
-    let mut source = Source { 
+    let mut source = Source {
         host: Host::Github, // default to github
         owner: String::from(""),
         repo: String::from(""),
@@ -109,7 +108,7 @@ fn parse_source(source: &str) -> Source {
         // owner/repo[:tag]
         2 => {
             source.owner = parts[0].to_string();
-        },
+        }
         // host/owner/repo[:tag]
         3 => {
             source.host = match parts[0] {
@@ -118,22 +117,22 @@ fn parse_source(source: &str) -> Source {
                 _ => panic!("Unsupported host"),
             };
             source.owner = parts[1].to_string();
-        },
+        }
         _ => {
             panic!("Invalid source format");
         }
     };
 
     // check last arg for tag, set the repo [and tag]
-    let last_part = parts[parts.len()-1];
+    let last_part = parts[parts.len() - 1];
     match last_part.find(':') {
         Some(index) => {
             source.repo = last_part[..index].to_string();
-            source.tag = Some(last_part[index+1..].to_string());
-        },
+            source.tag = Some(last_part[index + 1..].to_string());
+        }
         None => {
             source.repo = last_part.to_string();
-        },
+        }
     }
 
     source
@@ -145,9 +144,11 @@ fn gen_url(source: &Source) -> String {
         Host::Github => {
             format!(
                 "https://api.github.com/repos/{}/{}/tarball/{}",
-                source.owner, source.repo , source.tag.clone().unwrap_or_else(|| String::from(""))
+                source.owner,
+                source.repo,
+                source.tag.clone().unwrap_or_else(|| String::from(""))
             )
-        },
+        }
         Host::Gitlab => {
             let tag = match source.tag.clone() {
                 Some(tag) => format!("?sha={}", tag),
@@ -157,7 +158,7 @@ fn gen_url(source: &Source) -> String {
                 "https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive{}",
                 source.owner, source.repo, tag
             )
-        },
+        }
     };
 
     url

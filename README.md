@@ -1,43 +1,42 @@
 # clopy
 
-it's like git shallow clone, but it only makes a copy.
+it's like git shallow clone, but it only makes a copy. inspired by degit.
 
 great for ci, templating, compiling form source without full git history, etc.
-
-## Description
-
-// todo
-An in-depth paragraph about your project and overview of use.
 
 ## Getting Started
 
 ### Dependencies
 
-- // todo
-- Describe any prerequisites, libraries, OS version, etc., needed before installing program.
-- ex. Windows 10
+- rust, cargo
 
-### Installing
+### Installation
 
-- // todo
-- How/where to download your program
-- Any modifications needed to be made to files/folders
+`cargo install clopy`
 
-### Executing program
+### Use
 
-- // todo
-- How to run the program
-- Step-by-step bullets
-```
-code blocks for commands
+- owner and repo required. host, tag, and output location optional
+```{shell}
+clopy [host/]owner/repo[:branch|:tag|:commit]
 ```
 
 ## Help
 
-// todo
-Any advise for common problems or issues.
-```
-command to run if program contains helper info
+```{shell}
+> clopy --help
+...
+USAGE:
+    clopy [OPTIONS] <SOURCE> [DESTINATION]
+
+ARGS:
+    <SOURCE>         "[host/]owner/repo[:branch|:tag|:commit]"
+    <DESTINATION>    "output/path"
+
+OPTIONS:
+    -h, --help       Print help information
+    -v, --verbose    verbose output?
+    -V, --version    Print version information
 ```
 
 ## Authors
@@ -46,6 +45,8 @@ Jedidiah Park [(kjpark)](https://github.com/kjpark)
 
 ## Version History
 
+- 0.1.1
+  - first functional release
 - 0.1
   - init cargo test release
 
@@ -68,5 +69,4 @@ dual licensed as above, without any additional terms or conditions.
 
 ## Acknowledgments
 
-// todo
-Inspiration, code snippets, etc.
+Inspired by the original [degit.](https://github.com/Rich-Harris/degit)
