@@ -6,20 +6,28 @@ great for ci, templating, compiling form source without full git history, etc.
 
 ## Getting Started
 
-### Dependencies
-
-- rust, cargo
-
 ### Installation
 
 `cargo install clopy`
 
 ### Use
 
-- owner and repo required. host, tag, and output location optional
 ```{shell}
-clopy [host/]owner/repo[:branch|:tag|:commit]
+clopy [host/]owner/repo[:ref] [destination]
+
+# examples:
+clopy kjpark/clopy
+clopy github.com/kjpark/clopy:dev
 ```
+
+required arguments:
+- `owner` - repo owner
+- `repo` - repo name
+
+optional arguments:
+- `host/` - `github.com` (default) or `gitlab.com`
+- `:ref` - branch, tag, or commit
+- `destination` - output path for extracted folder
 
 ## Help
 
