@@ -1,20 +1,19 @@
 // https://docs.github.com/en/rest/reference/repos#download-a-repository-archive-tar
 // GET /repos/{owner}/{repo}/tarball/{ref}
+// https://api.github.com/repos/{}/{}/tarball/{}
+
+// https://docs.gitlab.com/ee/api/repositories.html#get-file-archive
+// GET https://gitlab.example.com/api/v4/projects/:id/repository/archive[.format]
+// https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive?sha=<commit_sha>&path=<path>
 
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
 
     let cli = Args::parse();
     println!("{:?}", cli);
-    // validate & parse later with regex
-    // let url = format!("https://api.github.com/repos/{}/tarball/main", cli.source);
 
-    let source = parse_source(&cli.source);
-    let url = format!("https://api.{}/repos/{}/{}/tarball/{}",
-                      source.host,
-                      source.owner,
-                      source.repo,
-                      source.tag);
+    let url = gen_url(&parse_source(&cli.source));
+    println!("{}", url);
 
     let client = reqwest::Client::new();
     let response = client
@@ -40,7 +39,8 @@ async fn main() -> Result<(), reqwest::Error> {
     };
 
     if cli.verbose {
-        println!("Received {:?} bytes", response.content_length().unwrap());
+        // breaks with gitlab
+        // println!("Received {:?} bytes", response.content_length().unwrap());
         println!("{:?}", response.headers());
     }
     
@@ -76,15 +76,15 @@ struct Args {
     verbose: bool,
 }
 
-// enum Host {
-//     Github,
-//     Gitlab, // self hosted?
-//     // Bitbucket,
-// }
+enum Host {
+    Github,
+    Gitlab, // self hosted?
+    // Bitbucket,
+}
 
 struct Source {
-    // host: Host,
-    host: String,
+    host: Host,
+    // host: String,
     owner: String,
     repo: String,
     tag: String,
@@ -93,16 +93,34 @@ struct Source {
 fn parse_source(source: &str) -> Source {
     let parts: Vec<&str> = source.split('/').collect();
     Source {
-        // host: match parts[0] {
-        //     "github.com" => Host::Github,
-        ///////"github" => "https://api.{}/repos/{}/{}/tarball/{}"
-        //     "gitlab.com" => Host::Gitlab,
-        //     // "bitbucket.org" => Host::Bitbucket,
-        //     _ => panic!("Unsupported host"),
-        // },
-        host: parts[0].to_string(),
+        host: match parts[0] {
+            "github.com" => Host::Github,
+            "gitlab.com" => Host::Gitlab,
+            // "bitbucket.org" => Host::Bitbucket,
+            _ => panic!("Unsupported host"),
+        },
+        // host: parts[0].to_string(),
         owner: parts[1].to_string(),
         repo: parts[2].to_string(),
         tag: parts[3].to_string(),
     }
+}
+
+fn gen_url(source: &Source) -> String {
+    let url = match source.host {
+        Host::Github => {
+            format!(
+                "https://api.github.com/repos/{}/{}/tarball/{}",
+                source.owner, source.repo, source.tag
+            )
+        },
+        Host::Gitlab => {
+            format!(
+                "https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive", // ?sha={}",
+                source.owner, source.repo // , source.tag
+            )
+        },
+    };
+
+    url
 }
