@@ -7,7 +7,14 @@ async fn main() -> Result<(), reqwest::Error> {
     let cli = Args::parse();
     println!("{:?}", cli);
     // validate & parse later with regex
-    let url = format!("https://api.github.com/repos/{}/tarball/main", cli.source);
+    // let url = format!("https://api.github.com/repos/{}/tarball/main", cli.source);
+
+    let source = parse_source(&cli.source);
+    let url = format!("https://api.{}/repos/{}/{}/tarball/{}",
+                      source.host,
+                      source.owner,
+                      source.repo,
+                      source.tag);
 
     let client = reqwest::Client::new();
     let response = client
@@ -67,4 +74,35 @@ struct Args {
     #[clap(short, long)]
     /// verbose output?
     verbose: bool,
+}
+
+// enum Host {
+//     Github,
+//     Gitlab, // self hosted?
+//     // Bitbucket,
+// }
+
+struct Source {
+    // host: Host,
+    host: String,
+    owner: String,
+    repo: String,
+    tag: String,
+}
+
+fn parse_source(source: &str) -> Source {
+    let parts: Vec<&str> = source.split('/').collect();
+    Source {
+        // host: match parts[0] {
+        //     "github.com" => Host::Github,
+        ///////"github" => "https://api.{}/repos/{}/{}/tarball/{}"
+        //     "gitlab.com" => Host::Gitlab,
+        //     // "bitbucket.org" => Host::Bitbucket,
+        //     _ => panic!("Unsupported host"),
+        // },
+        host: parts[0].to_string(),
+        owner: parts[1].to_string(),
+        repo: parts[2].to_string(),
+        tag: parts[3].to_string(),
+    }
 }
