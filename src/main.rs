@@ -87,31 +87,64 @@ struct Source {
     // host: String,
     owner: String,
     repo: String,
-    tag: String,
+    tag: Option<String>,
 }
 
+// args seperated by /
+// strip empty
+// match args.count() {
+//     2 => owner/repo[:tag]
+//     3 => host/owner/repo[:tag]
+//     _ => panic!("no")
+// }
 fn parse_source(source: &str) -> Source {
-    let parts: Vec<&str> = source.split('/').collect();
-    Source {
-        host: match parts[0] {
-            "github.com" => Host::Github,
-            "gitlab.com" => Host::Gitlab,
-            // "bitbucket.org" => Host::Bitbucket,
-            _ => panic!("Unsupported host"),
+    let parts: Vec<&str> = source
+        .split('/')
+        .filter(|&x| !x.is_empty())
+        .collect();
+
+    println!("{:?}", parts);
+
+    let mut source = Source { 
+        host: Host::Github, // default to github
+        owner: String::from(""),
+        repo: String::from(""),
+        tag: None,
+    };
+
+    match parts.len() {
+        // owner/repo[:tag]
+        2 => {
+            source.owner = parts[0].to_string();
+            source.repo = parts[1].to_string();
+            source.tag = None;
         },
-        // host: parts[0].to_string(),
-        owner: parts[1].to_string(),
-        repo: parts[2].to_string(),
-        tag: parts[3].to_string(),
-    }
+        // host/owner/repo[:tag]
+        3 => {
+            source.host = match parts[0] {
+                "github.com" => Host::Github,
+                "gitlab.com" => Host::Gitlab,
+                _ => panic!("Unsupported host"),
+            };
+            source.owner = parts[1].to_string();
+            source.repo = parts[2].to_string();
+            source.tag = None;
+        },
+        _ => {
+            panic!("Invalid source format");
+        }
+    };
+
+    source
 }
 
+// impl Source.gen_url(); instead
 fn gen_url(source: &Source) -> String {
     let url = match source.host {
         Host::Github => {
             format!(
-                "https://api.github.com/repos/{}/{}/tarball/{}",
-                source.owner, source.repo, source.tag
+                "https://api.github.com/repos/{}/{}/tarball", // /{}",
+                source.owner, source.repo // , source.tag
             )
         },
         Host::Gitlab => {
