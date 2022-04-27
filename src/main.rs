@@ -1,4 +1,4 @@
-// https://docs.github.com/en/rest/reference/repos#download-a-repository-archive-tar
+// https://docs.github.com/en/rest/repos/contents#download-a-repository-archive-tar
 // GET /repos/{owner}/{repo}/tarball/{ref}
 // https://api.github.com/repos/{}/{}/tarball/{}
 
@@ -64,8 +64,7 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    // todo owner/repo[:branch|:tag]
-    /// "owner/repo"
+    /// "[host/]owner/repo[:branch|:tag|:commit]"
     source: String,
 
     /// "output/path"
@@ -90,15 +89,9 @@ struct Source {
     tag: Option<String>,
 }
 
-// args seperated by /
-// strip empty
-// match args.count() {
-//     2 => owner/repo[:tag]
-//     3 => host/owner/repo[:tag]
-//     _ => panic!("no")
-// }
 fn parse_source(source: &str) -> Source {
     let parts: Vec<&str> = source
+        // BUG: if tag has `/` in it, tag will be split
         .split('/')
         .filter(|&x| !x.is_empty())
         .collect();
@@ -116,8 +109,6 @@ fn parse_source(source: &str) -> Source {
         // owner/repo[:tag]
         2 => {
             source.owner = parts[0].to_string();
-            source.repo = parts[1].to_string();
-            source.tag = None;
         },
         // host/owner/repo[:tag]
         3 => {
@@ -127,13 +118,23 @@ fn parse_source(source: &str) -> Source {
                 _ => panic!("Unsupported host"),
             };
             source.owner = parts[1].to_string();
-            source.repo = parts[2].to_string();
-            source.tag = None;
         },
         _ => {
             panic!("Invalid source format");
         }
     };
+
+    // check last arg for tag, set the repo [and tag]
+    let last_part = parts[parts.len()-1];
+    match last_part.find(':') {
+        Some(index) => {
+            source.repo = last_part[..index].to_string();
+            source.tag = Some(last_part[index+1..].to_string());
+        },
+        None => {
+            source.repo = last_part.to_string();
+        },
+    }
 
     source
 }
@@ -143,14 +144,18 @@ fn gen_url(source: &Source) -> String {
     let url = match source.host {
         Host::Github => {
             format!(
-                "https://api.github.com/repos/{}/{}/tarball", // /{}",
-                source.owner, source.repo // , source.tag
+                "https://api.github.com/repos/{}/{}/tarball/{}",
+                source.owner, source.repo , source.tag.clone().unwrap_or_else(|| String::from(""))
             )
         },
         Host::Gitlab => {
+            let tag = match source.tag.clone() {
+                Some(tag) => format!("?sha={}", tag),
+                None => String::from(""),
+            };
             format!(
-                "https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive", // ?sha={}",
-                source.owner, source.repo // , source.tag
+                "https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive{}",
+                source.owner, source.repo, tag
             )
         },
     };
