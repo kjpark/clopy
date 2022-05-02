@@ -80,16 +80,20 @@ fn parse_source(source: &str) -> Source {
 fn gen_url(source: &Source) -> String {
     let url = match source.host {
         Host::Github => {
+            let tag = match source.tag {
+                Some(ref tag) => String::from(tag),
+                None => String::from(""),
+            };
             format!(
                 "https://api.github.com/repos/{}/{}/tarball/{}",
                 source.owner,
                 source.repo,
-                source.tag.clone().unwrap_or_else(|| String::from(""))
+                tag
             )
         }
         Host::Gitlab => {
-            let tag = match source.tag.clone() {
-                Some(tag) => format!("?sha={}", tag),
+            let tag = match source.tag {
+                Some(ref tag) => format!("?sha={}", tag),
                 None => String::from(""),
             };
             format!(
