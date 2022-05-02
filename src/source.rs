@@ -13,13 +13,23 @@ pub struct Source {
     tag: Option<String>,
 }
 
+// Source::from("kjpark/clopy:dev").to_url();
+impl Source {
+    pub fn from(source: &str) -> Source {
+        parse_source(source)
+    }
+    pub fn to_url(&self) -> String {
+        gen_url(&self)
+    }
+}
+
 enum Host {
     Github,
     Gitlab, // self hosted?
             // Bitbucket,
 }
 
-pub fn parse_source(source: &str) -> Source {
+fn parse_source(source: &str) -> Source {
     let parts: Vec<&str> = source
         // BUG: if tag has `/` in it, tag will be split
         .split('/')
@@ -69,8 +79,7 @@ pub fn parse_source(source: &str) -> Source {
     source
 }
 
-// impl Source.gen_url(); instead
-pub fn gen_url(source: &Source) -> String {
+fn gen_url(source: &Source) -> String {
     let url = match source.host {
         Host::Github => {
             format!(

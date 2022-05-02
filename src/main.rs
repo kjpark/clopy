@@ -8,7 +8,7 @@ async fn main() -> Result<(), reqwest::Error> {
     let args = cli::Cli::parse();
     println!("{:?}", args);
 
-    let url = source::gen_url(&source::parse_source(&args.source));
+    let url = source::Source::from(&args.source).to_url();
     println!("{}", url);
 
     let client = reqwest::Client::new();
