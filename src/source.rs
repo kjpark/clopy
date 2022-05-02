@@ -54,11 +54,32 @@ fn parse_source(input: &str) -> Source {
     .unwrap();
 
     let captures = re.captures(input).unwrap();
+    println!("{:?}", captures);
 
-    // temp
-    println!("{:#?}", captures);
+    if let Some(host) = captures.name("host") {
+        source.host = match host.as_str() {
+            "github.com" => Host::Github,
+            "gitlab.com" => Host::Gitlab,
+            _ => panic!("Unsupported host: {:?}", host),
+        };
+    }
 
-    // temp return nothing useful
+    if let Some(owner) = captures.name("owner") {
+        source.owner = owner.as_str().to_string();
+    }
+
+    if let Some(repo_only) = captures.name("repo_only") {
+        source.repo = repo_only.as_str().to_string();
+    }
+
+    if let Some(repo) = captures.name("repo") {
+        source.repo = repo.as_str().to_string();
+    }
+
+    if let Some(tag) = captures.name("tag") {
+        source.tag = Some(tag.as_str().to_string());
+    }
+
     source
 }
 
