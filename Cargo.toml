@@ -1,6 +1,6 @@
 [package]
 name = "clopy"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["jedidiah park"]
 description = "it's like git shallow clone, but it only makes a copy"
@@ -14,7 +14,7 @@ categories = ["command-line-utilities", "filesystem", "development-tools"]
 bytes = "1.1"
 clap = { version = "3.1", features = ["derive"] }
 flate2 = "1.0"
+regex = "1.5"
 reqwest = { version = "0.11" }
 tar = "0.4"
 tokio = { version = "1", features = ["full"] }
-

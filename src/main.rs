@@ -1,165 +1,90 @@
-// https://docs.github.com/en/rest/repos/contents#download-a-repository-archive-tar
-// GET /repos/{owner}/{repo}/tarball/{ref}
-// https://api.github.com/repos/{}/{}/tarball/{}
+mod cli;
+mod source;
 
-// https://docs.gitlab.com/ee/api/repositories.html#get-file-archive
-// GET https://gitlab.example.com/api/v4/projects/:id/repository/archive[.format]
-// https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive?sha=<commit_sha>&path=<path>
+use clap::Parser;
+use std::error;
+use std::process;
 
 #[tokio::main]
-async fn main() -> Result<(), reqwest::Error> {
-    let cli = Args::parse();
-    println!("{:?}", cli);
+async fn main() -> Result<(), Box<dyn error::Error>> {
+    let args = cli::Cli::parse();
+    let source = source::Source::from(&args.source);
 
-    let url = gen_url(&parse_source(&cli.source));
-    println!("{}", url);
+    let url = source.to_url();
+    let header_map = create_headers(&source);
 
     let client = reqwest::Client::new();
-    let response = client
-        .get(url)
-        .header(reqwest::header::USER_AGENT, "reqwest")
-        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
-        .send()
-        .await?;
+    let response = client.get(&url).headers(header_map).send().await?;
 
-    match response.status() {
-        reqwest::StatusCode::OK => {
-            println!("200 Success. {:?}", response.status());
-        }
-        reqwest::StatusCode::NOT_FOUND => {
-            println!("404 Not Found. {:?}", response.status());
-        }
-        reqwest::StatusCode::UNAUTHORIZED => {
-            println!("401 Unauthorized {:?}", response.status());
-        }
-        _ => {
-            panic!("Uncaught error, please file bug report <3");
-        }
-    };
+    handle_response(&url, response.status());
 
-    if cli.verbose {
+    if args.verbose {
         // breaks with gitlab
         // println!("Received {:?} bytes", response.content_length().unwrap());
+        println!("{}", url);
+        println!("{:?}", args);
         println!("{:?}", response.headers());
     }
 
-    let destination = match cli.destination {
-        Some(destination) => destination,
-        None => String::from("."),
-    };
-
     let bytes: Vec<u8> = response.bytes().await?.to_vec();
-    let tar = flate2::read::GzDecoder::new(&bytes[..]);
-    let mut archive = tar::Archive::new(tar);
-    archive.unpack(destination).unwrap_or_else(|e| {
-        panic!("Error unpacking tarball: {}", e);
-    });
+    unpack(bytes, args.destination)?;
 
     Ok(())
 }
 
-use clap::Parser;
+fn create_headers(source: &source::Source) -> reqwest::header::HeaderMap {
+    let mut headers = reqwest::header::HeaderMap::new();
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// "[host/]owner/repo[:branch|:tag|:commit]"
-    source: String,
+    headers.insert(
+        reqwest::header::USER_AGENT,
+        reqwest::header::HeaderValue::from_static("clopy"),
+    );
 
-    /// "output/path"
-    destination: Option<String>,
+    headers.insert(
+        reqwest::header::ACCEPT,
+        reqwest::header::HeaderValue::from_static("application/vnd.github.v3+json"),
+    );
 
-    #[clap(short, long)]
-    /// verbose output?
-    verbose: bool,
+    // if let Some(token) = source.token() {
+    //     headers.insert(
+    //         reqwest::header::AUTHORIZATION,
+    //         reqwest::header::HeaderValue::from_str(&format!("token {}", token)).unwrap(),
+    //     );
+    // }
+
+    headers
 }
 
-enum Host {
-    Github,
-    Gitlab, // self hosted?
-            // Bitbucket,
-}
-
-struct Source {
-    host: Host,
-    // host: String,
-    owner: String,
-    repo: String,
-    tag: Option<String>,
-}
-
-fn parse_source(source: &str) -> Source {
-    let parts: Vec<&str> = source
-        // BUG: if tag has `/` in it, tag will be split
-        .split('/')
-        .filter(|&x| !x.is_empty())
-        .collect();
-
-    println!("{:?}", parts);
-
-    let mut source = Source {
-        host: Host::Github, // default to github
-        owner: String::from(""),
-        repo: String::from(""),
-        tag: None,
-    };
-
-    match parts.len() {
-        // owner/repo[:tag]
-        2 => {
-            source.owner = parts[0].to_string();
+fn handle_response(url: &str, status_code: reqwest::StatusCode) {
+    match status_code {
+        reqwest::StatusCode::OK => {
+            println!("Response: {}", status_code);
         }
-        // host/owner/repo[:tag]
-        3 => {
-            source.host = match parts[0] {
-                "github.com" => Host::Github,
-                "gitlab.com" => Host::Gitlab,
-                _ => panic!("Unsupported host"),
-            };
-            source.owner = parts[1].to_string();
+        reqwest::StatusCode::NOT_FOUND => {
+            eprintln!("Error: {}", status_code);
+            // todo: print help 404
+            process::exit(1);
+        }
+        reqwest::StatusCode::UNAUTHORIZED => {
+            eprintln!("Error: {}", status_code);
+            // todo: print help for auth
+            process::exit(1);
         }
         _ => {
-            panic!("Invalid source format");
-        }
-    };
-
-    // check last arg for tag, set the repo [and tag]
-    let last_part = parts[parts.len() - 1];
-    match last_part.find(':') {
-        Some(index) => {
-            source.repo = last_part[..index].to_string();
-            source.tag = Some(last_part[index + 1..].to_string());
-        }
-        None => {
-            source.repo = last_part.to_string();
+            eprintln!("Error: {}", status_code);
+            process::exit(1);
         }
     }
-
-    source
 }
 
-// impl Source.gen_url(); instead
-fn gen_url(source: &Source) -> String {
-    let url = match source.host {
-        Host::Github => {
-            format!(
-                "https://api.github.com/repos/{}/{}/tarball/{}",
-                source.owner,
-                source.repo,
-                source.tag.clone().unwrap_or_else(|| String::from(""))
-            )
-        }
-        Host::Gitlab => {
-            let tag = match source.tag.clone() {
-                Some(tag) => format!("?sha={}", tag),
-                None => String::from(""),
-            };
-            format!(
-                "https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive{}",
-                source.owner, source.repo, tag
-            )
-        }
+fn unpack(bytes: Vec<u8>, destination: Option<String>) -> Result<(), Box<dyn error::Error>> {
+    let destination = match destination {
+        Some(destination) => destination,
+        None => String::from("."),
     };
 
-    url
+    let tar = flate2::read::GzDecoder::new(&bytes[..]);
+    let mut archive = tar::Archive::new(tar);
+    archive.unpack(destination)?;
+    Ok(())
 }
