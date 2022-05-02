@@ -36,8 +36,6 @@ fn parse_source(source: &str) -> Source {
         .filter(|&x| !x.is_empty())
         .collect();
 
-    println!("{:?}", parts);
-
     let mut source = Source {
         host: Host::Github, // default to github
         owner: String::from(""),
