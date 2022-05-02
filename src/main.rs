@@ -1,9 +1,9 @@
 mod cli;
 mod source;
 
+use clap::Parser;
 use std::error;
 use std::process;
-use clap::Parser;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn error::Error>> {
@@ -14,11 +14,7 @@ async fn main() -> Result<(), Box<dyn error::Error>> {
     let header_map = create_headers(&source);
 
     let client = reqwest::Client::new();
-    let response = client
-        .get(&url)
-        .headers(header_map)
-        .send()
-        .await?;
+    let response = client.get(&url).headers(header_map).send().await?;
 
     handle_response(&url, response.status());
 

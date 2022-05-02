@@ -6,6 +6,8 @@
 // GET https://gitlab.example.com/api/v4/projects/:id/repository/archive[.format]
 // https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive?sha=<commit_sha>&path=<path>
 
+use regex::Regex;
+
 pub struct Source {
     host: Host,
     owner: String,
@@ -29,51 +31,34 @@ enum Host {
             // Bitbucket,
 }
 
-fn parse_source(source: &str) -> Source {
-    let parts: Vec<&str> = source
-        // BUG: if tag has `/` in it, tag will be split
-        .split('/')
-        .filter(|&x| !x.is_empty())
-        .collect();
-
+fn parse_source(input: &str) -> Source {
     let mut source = Source {
         host: Host::Github, // default to github
-        owner: String::from(""),
-        repo: String::from(""),
+        owner: String::new(),
+        repo: String::new(),
         tag: None,
     };
 
-    match parts.len() {
-        // owner/repo[:tag]
-        2 => {
-            source.owner = parts[0].to_string();
-        }
-        // host/owner/repo[:tag]
-        3 => {
-            source.host = match parts[0] {
-                "github.com" => Host::Github,
-                "gitlab.com" => Host::Gitlab,
-                _ => panic!("Unsupported host"),
-            };
-            source.owner = parts[1].to_string();
-        }
-        _ => {
-            panic!("Invalid source format");
-        }
-    };
+    // captures:
+    // [host]
+    // owner
+    // repo_only | (repo, tag)
+    let re = Regex::new(
+        r"(?x)
+        (?P<host>(github|gitlab)\.com/)?
+        (?P<owner>.+)
+        /
+        ((?P<repo_only>[^:]+$)|(?P<repo>.+):(?P<tag>.+$))
+        ",
+    )
+    .unwrap();
 
-    // check last arg for tag, set the repo [and tag]
-    let last_part = parts[parts.len() - 1];
-    match last_part.find(':') {
-        Some(index) => {
-            source.repo = last_part[..index].to_string();
-            source.tag = Some(last_part[index + 1..].to_string());
-        }
-        None => {
-            source.repo = last_part.to_string();
-        }
-    }
+    let captures = re.captures(input).unwrap();
 
+    // temp
+    println!("{:#?}", captures);
+
+    // temp return nothing useful
     source
 }
 
@@ -86,9 +71,7 @@ fn gen_url(source: &Source) -> String {
             };
             format!(
                 "https://api.github.com/repos/{}/{}/tarball/{}",
-                source.owner,
-                source.repo,
-                tag
+                source.owner, source.repo, tag
             )
         }
         Host::Gitlab => {
@@ -105,3 +88,29 @@ fn gen_url(source: &Source) -> String {
 
     url
 }
+
+// test code to generate regex
+// todo: create real unit test
+
+// fn main() {
+//     let re = Regex::new(
+//         r"(?x)
+//         (?P<host>(github|gitlab)\.com/)?
+//         (?P<owner>.+)
+//         /
+//         ((?P<repo_only>[^:]+$)|(?P<repo>.+):(?P<tag>.+$))
+//         ",
+//     )
+//     .unwrap();
+
+//     let test_cases = vec![
+//         "github.com/kjpark/clopy:dev",
+//         "gitlab.com/kjpark/clopy",
+//         "kjpark/clopy:dev",
+//         "kjpark/clopy",
+//     ];
+
+//     for s in test_cases {
+//         println!("{:#?}", re.captures(s).unwrap());
+//     }
+// }
