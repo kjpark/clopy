@@ -82,7 +82,7 @@ fn gen_url(source: &Source) -> String {
         Host::Github => {
             let tag = match source.tag {
                 Some(ref tag) => String::from(tag),
-                None => String::from(""),
+                None => String::new(),
             };
             format!(
                 "https://api.github.com/repos/{}/{}/tarball/{}",
@@ -94,7 +94,7 @@ fn gen_url(source: &Source) -> String {
         Host::Gitlab => {
             let tag = match source.tag {
                 Some(ref tag) => format!("?sha={}", tag),
-                None => String::from(""),
+                None => String::new(),
             };
             format!(
                 "https://gitlab.com/api/v4/projects/{}%2F{}/repository/archive{}",
