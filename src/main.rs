@@ -2,6 +2,7 @@ mod cli;
 mod source;
 
 use std::error;
+use std::process;
 use clap::Parser;
 
 #[tokio::main]
@@ -17,22 +18,7 @@ async fn main() -> Result<(), Box<dyn error::Error>> {
         .send()
         .await?;
 
-    match response.status() {
-        reqwest::StatusCode::OK => {
-            println!("200 Success. {:?}", response.status());
-        }
-        reqwest::StatusCode::NOT_FOUND => {
-            println!("404 Not Found. {:?}", response.status());
-            panic!("404 Not Found");
-        }
-        reqwest::StatusCode::UNAUTHORIZED => {
-            println!("401 Unauthorized {:?}", response.status());
-            panic!("401 Unauthorized");
-        }
-        _ => {
-            panic!("Invalid response status: {:?}", response.status());
-        }
-    };
+    handle_response(&url, response.status());
 
     if args.verbose {
         // breaks with gitlab
@@ -46,6 +32,28 @@ async fn main() -> Result<(), Box<dyn error::Error>> {
     unpack(bytes, args.destination)?;
 
     Ok(())
+}
+
+fn handle_response(url: &str, status_code: reqwest::StatusCode) {
+    match status_code {
+        reqwest::StatusCode::OK => {
+            println!("Response: {}", status_code);
+        }
+        reqwest::StatusCode::NOT_FOUND => {
+            eprintln!("Error: {}", status_code);
+            // todo: print help 404
+            process::exit(1);
+        }
+        reqwest::StatusCode::UNAUTHORIZED => {
+            eprintln!("Error: {}", status_code);
+            // todo: print help for auth
+            process::exit(1);
+        }
+        _ => {
+            eprintln!("Error: {}", status_code);
+            process::exit(1);
+        }
+    }
 }
 
 fn unpack(bytes: Vec<u8>, destination: Option<String>) -> Result<(), Box<dyn error::Error>> {
