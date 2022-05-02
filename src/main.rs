@@ -8,13 +8,15 @@ use clap::Parser;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn error::Error>> {
     let args = cli::Cli::parse();
-    let url = source::Source::from(&args.source).to_url();
+    let source = source::Source::from(&args.source);
+
+    let url = source.to_url();
+    let header_map = create_headers(&source);
 
     let client = reqwest::Client::new();
     let response = client
         .get(&url)
-        .header(reqwest::header::USER_AGENT, "reqwest")
-        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .headers(header_map)
         .send()
         .await?;
 
@@ -32,6 +34,29 @@ async fn main() -> Result<(), Box<dyn error::Error>> {
     unpack(bytes, args.destination)?;
 
     Ok(())
+}
+
+fn create_headers(source: &source::Source) -> reqwest::header::HeaderMap {
+    let mut headers = reqwest::header::HeaderMap::new();
+
+    headers.insert(
+        reqwest::header::USER_AGENT,
+        reqwest::header::HeaderValue::from_static("clopy"),
+    );
+
+    headers.insert(
+        reqwest::header::ACCEPT,
+        reqwest::header::HeaderValue::from_static("application/vnd.github.v3+json"),
+    );
+
+    // if let Some(token) = source.token() {
+    //     headers.insert(
+    //         reqwest::header::AUTHORIZATION,
+    //         reqwest::header::HeaderValue::from_str(&format!("token {}", token)).unwrap(),
+    //     );
+    // }
+
+    headers
 }
 
 fn handle_response(url: &str, status_code: reqwest::StatusCode) {
