@@ -5,7 +5,7 @@ use clap::Parser;
 
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
-    let args = cli::Args::parse();
+    let args = cli::Cli::parse();
     println!("{:?}", args);
 
     let url = source::gen_url(&source::parse_source(&args.source));
