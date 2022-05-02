@@ -1,6 +1,6 @@
 [package]
 name = "clopy"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["jedidiah park"]
 description = "it's like git shallow clone, but it only makes a copy"

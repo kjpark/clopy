@@ -2,7 +2,7 @@
 
 it's like git shallow clone, but it only makes a copy. inspired by degit.
 
-great for ci, templating, compiling form source without full git history, etc.
+great for ci, templating, compiling from source without full git history, etc.
 
 ## Getting Started
 
@@ -53,6 +53,9 @@ Jedidiah Park [(kjpark)](https://github.com/kjpark)
 
 ## Version History
 
+- 0.1.2
+  - refactor to use modules
+  - use regex in parsing logic
 - 0.1.1
   - first functional release
 - 0.1
